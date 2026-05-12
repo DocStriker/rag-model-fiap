@@ -6,7 +6,7 @@ O Qdrant foi mantido como banco vetorial por oferecer suporte nativo a busca por
 
 ## 2. Modelo de linguagem: Gemini (via OpenAI)
 
-O modelo `gemini-1.5-mini` foi escolhido por ser eficiente em português, com boa latência e custo compatível para uso conversacional. Os embeddings são gerados gratuitamente via `gemini-embedding-2` da API Gemini (dimensão 768), mantendo a separação entre geração de texto e vetorização. Essa arquitetura é explícita no código — `gemini_service.py` expõe os métodos `call_llm` e `get_embedding`, facilitando futura troca de provedores sem mudar o fluxo de RAG.
+O modelo `gemini-3.1-flash-lite-preview` foi escolhido por ser eficiente em conversas e compatível com o fluxo de RAG. Os embeddings são gerados via `gemini-embedding-2` da API Gemini (dimensão 1536), mantendo a separação entre geração de texto e vetorização. Essa arquitetura é explícita no código — `gemini_service.py` expõe os métodos `call_llm` e `get_embedding`, facilitando futura troca de provedores sem mudar o fluxo de RAG.
 
 ## 3. Melhorias de design implementadas
 

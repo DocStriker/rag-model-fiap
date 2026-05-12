@@ -19,8 +19,8 @@ from google.genai import types
 logger = structlog.get_logger(__name__)
 
 DEFAULT_CHAT_MODEL = "gemini-3.1-flash-lite-preview"
-DEFAULT_EMBEDDING_MODEL = "text-embedding-005"
-EMBEDDING_DIMENSION = 1024  # Recomendado para text-embedding-005
+DEFAULT_EMBEDDING_MODEL = "gemini-embedding-2"
+EMBEDDING_DIMENSION = 1536  # Recomendado para gemini-embedding-2 com dimensão 1536
 _EMBEDDING_CACHE_SIZE = 512
 
 

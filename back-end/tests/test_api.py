@@ -26,7 +26,7 @@ from fastapi.testclient import TestClient
 def mock_gemini_service():
     svc = MagicMock()
     svc.call_llm.return_value = "Resposta simulada do Gemini."
-    svc.get_embedding.return_value = [0.1] * 1024
+    svc.get_embedding.return_value = [0.1] * 1536
     return svc
 
 
@@ -232,3 +232,19 @@ def test_chunk_text_invalid_params():
 
     with pytest.raises(ValueError):
         QdrantService._chunk_text("texto", chunk_size=10, overlap=20)
+
+
+def test_chunk_text_long_sentence_splits():
+    from src.services.qdrant_service import QdrantService
+
+    text = "A" * 120 + "."
+    chunks = QdrantService._chunk_text(text, chunk_size=50, overlap=10)
+    assert len(chunks) > 1
+    assert all(len(chunk) <= 50 for chunk in chunks)
+
+
+def test_chunk_text_empty_returns_empty():
+    from src.services.qdrant_service import QdrantService
+
+    chunks = QdrantService._chunk_text("", chunk_size=50, overlap=10)
+    assert chunks == []

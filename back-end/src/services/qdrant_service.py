@@ -27,7 +27,7 @@ from src.services.gemini_service import GeminiService
 
 logger = structlog.get_logger(__name__)
 
-DEFAULT_VECTOR_SIZE = 1024
+DEFAULT_VECTOR_SIZE = 1536
 DEFAULT_DISTANCE = Distance.COSINE
 DEFAULT_CHUNK_SIZE = 800        # caracteres por chunk
 DEFAULT_CHUNK_OVERLAP = 150     # sobreposição entre chunks
@@ -264,22 +264,52 @@ class QdrantService:
         if chunk_size <= overlap:
             raise ValueError("chunk_size deve ser maior que overlap")
 
-        # Divide em sentenças preservando o delimitador
+        if not text or not text.strip():
+            return []
+
         sentence_endings = re.compile(r'(?<=[.!?])\s+|\n{2,}')
         sentences = [s.strip() for s in sentence_endings.split(text) if s.strip()]
 
         chunks: list[str] = []
         current = ""
 
+        def split_long_text(long_text: str) -> list[str]:
+            parts: list[str] = []
+            start = 0
+            while start < len(long_text):
+                end = start + chunk_size
+                part = long_text[start:end].strip()
+                if not part:
+                    break
+                parts.append(part)
+                if end >= len(long_text):
+                    break
+                start = end - overlap
+            return parts
+
         for sentence in sentences:
-            if len(current) + len(sentence) + 1 <= chunk_size:
-                current = (current + " " + sentence).strip()
-            else:
-                if current:
-                    chunks.append(current)
-                # Sobreposição: pega o final do chunk anterior
+            candidate = (current + " " + sentence).strip() if current else sentence
+            if len(candidate) <= chunk_size:
+                current = candidate
+                continue
+
+            if current:
+                chunks.append(current)
                 overlap_text = current[-overlap:] if len(current) > overlap else current
-                current = (overlap_text + " " + sentence).strip()
+                remainder = (overlap_text + " " + sentence).strip()
+            else:
+                remainder = sentence
+
+            if len(remainder) <= chunk_size:
+                current = remainder
+                continue
+
+            long_chunks = split_long_text(remainder)
+            if long_chunks:
+                chunks.extend(long_chunks[:-1])
+                current = long_chunks[-1]
+            else:
+                current = remainder
 
         if current:
             chunks.append(current)

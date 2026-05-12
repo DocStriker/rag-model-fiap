@@ -45,7 +45,7 @@ def list_collections(
 @router.post("", response_model=CollectionListResponse, status_code=status.HTTP_201_CREATED)
 def create_collection(
     req: CollectionCreateRequest,
-    qdrant: "QdrantService" = Depends(lambda: __import__('src.dependencies').get_qdrant_service()),
+    qdrant: "QdrantService" = Depends(get_qdrant_service),
 ) -> CollectionListResponse:
     """Cria uma nova coleção no banco vetorial."""
     if qdrant.collection_exists(req.name):
@@ -61,7 +61,7 @@ def create_collection(
 @router.delete("/{name}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
 def delete_collection(
     name: str,
-    qdrant: "QdrantService" = Depends(lambda: __import__('src.dependencies').get_qdrant_service()),
+    qdrant: "QdrantService" = Depends(get_qdrant_service),
 ) -> Response:
     """Remove uma coleção e todos os seus documentos."""
     if not qdrant.collection_exists(name):
@@ -78,7 +78,7 @@ def delete_collection(
 async def upload_document(
     name: str,
     file: UploadFile = File(...),
-    qdrant: "QdrantService" = Depends(lambda: __import__('src.dependencies').get_qdrant_service()),
+    qdrant: "QdrantService" = Depends(get_qdrant_service),
 ) -> UploadResponse:
     """
     Faz upload e indexação de um documento (.txt, .md, .pdf) na coleção.
