@@ -1,0 +1,47 @@
+# Docker Compose para ambiente completo (back-end + Qdrant local).
+#
+# Justificativa (Requisito 3.7):
+# Empacotamento via Docker garante ambiente reproduzível sem instalar
+# dependências manualmente. O Qdrant roda em contêiner separado e persiste
+# dados em volume nomeado.
+#
+# Como usar:
+#   cp .env.example .env          # preencha as chaves
+#   docker compose up --build     # sobe tudo
+#   docker compose down -v        # para e remove volumes
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.12.1
+    container_name: fiapai_qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fiapai_api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      QDRANT_ENDPOINT: http://qdrant:6333
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  qdrant_data:
