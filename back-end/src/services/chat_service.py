@@ -10,6 +10,7 @@ Melhorias implementadas vs. versão original:
 from __future__ import annotations
 
 import structlog
+import traceback
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -96,7 +97,12 @@ class ChatService:
                 message, system=SYSTEM_PROMPT, history=trimmed_history
             )
         except Exception as exc:
-            log.error("chat.direct_flow.error", error=str(exc))
+            log.error(
+                "chat.direct_flow.error",
+                error=str(exc),
+                exc_type=type(exc).__name__,
+                traceback=traceback.format_exc()
+            )
             return "Ocorreu um erro ao processar sua mensagem. Tente novamente."
 
     def _answer_with_rag(
@@ -108,7 +114,12 @@ class ChatService:
         try:
             results = qdrant.search(collection, message, limit=RAG_TOP_K)
         except Exception as exc:
-            log.error("chat.rag.search_error", error=str(exc))
+            log.error(
+                "chat.rag.search_error",
+                error=str(exc),
+                exc_type=type(exc).__name__,
+                traceback=traceback.format_exc()
+            )
             return (
                 "Ocorreu um erro ao buscar informações na coleção. "
                 "Verifique se o banco vetorial está disponível."
@@ -144,7 +155,14 @@ class ChatService:
                 prompt, system=RAG_SYSTEM_PROMPT, history=history
             )
         except Exception as exc:
-            log.error("chat.rag.llm_error", error=str(exc))
+            log.error(
+                "chat.rag.llm_error",
+                error=str(exc),
+                exc_type=type(exc).__name__,
+                traceback=traceback.format_exc(),
+                context_len=len(context),
+                prompt_len=len(prompt)
+            )
             return "Ocorreu um erro ao gerar a resposta. Tente novamente."
 
     def _get_qdrant(self) -> QdrantService:

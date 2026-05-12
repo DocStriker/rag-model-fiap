@@ -58,26 +58,30 @@ class GeminiService:
         history: list[dict] | None = None,
         max_tokens: int = 2048,
     ) -> str:
-        messages: list[types.Content] = []
+        messages: list[dict | types.Content] = []
+        
+        # Adicionar system prompt se fornecido
         if system:
-            messages.append(types.Content(
-                role="user",
-                parts=[types.Part.from_text(f"Sistema: {system}")]
-            ))
+            messages.append({
+                "role": "user",
+                "parts": [{"text": f"Sistema: {system}"}]
+            })
 
+        # Adicionar histórico
         if history:
             for msg in history:
                 role = msg.get("role", "user")
                 content = msg.get("content", "")
-                messages.append(types.Content(
-                    role=role,
-                    parts=[types.Part.from_text(content)]
-                ))
+                messages.append({
+                    "role": role,
+                    "parts": [{"text": content}]
+                })
 
-        messages.append(types.Content(
-            role="user",
-            parts=[types.Part.from_text(prompt)]
-        ))
+        # Adicionar prompt atual
+        messages.append({
+            "role": "user",
+            "parts": [{"text": prompt}]
+        })
 
         log = logger.bind(model=model, history_len=len(history or []))
         log.info("llm.request")
@@ -91,11 +95,24 @@ class GeminiService:
                     max_output_tokens=max_tokens,
                 )
             )
-            text = response.text or ""
-            log.info("llm.response", output_tokens=len(text.split()))
+            # Extrair texto da resposta, tratando diferentes formatos
+            text = ""
+            if hasattr(response, 'text'):
+                text = response.text or ""
+            elif hasattr(response, 'content') and hasattr(response.content, 'parts'):
+                for part in response.content.parts:
+                    if hasattr(part, 'text'):
+                        text += part.text
+            elif hasattr(response, 'candidates') and response.candidates:
+                for candidate in response.candidates:
+                    if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                        for part in candidate.content.parts:
+                            if hasattr(part, 'text'):
+                                text += part.text
+            log.info("llm.response", output_tokens=len(text.split()) if text else 0)
             return text.strip()
         except Exception as exc:
-            log.error("llm.error", error=str(exc))
+            log.error("llm.error", error=str(exc), exc_type=type(exc).__name__)
             raise RuntimeError(
                 f"Erro na chamada do Gemini: {exc}"
             ) from exc
