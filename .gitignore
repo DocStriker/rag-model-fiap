@@ -1,3 +1,4 @@
 .venv
 back-end/.env
 .vscode
+.pytest_cache
