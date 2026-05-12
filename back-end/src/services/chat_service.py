@@ -10,9 +10,11 @@ Melhorias implementadas vs. versão original:
 from __future__ import annotations
 
 import structlog
+from typing import TYPE_CHECKING
 
-from src.services.anthropic_service import AnthropicService
-from src.services.qdrant_service import QdrantService
+if TYPE_CHECKING:
+    from src.services.gemini_service import GeminiService
+    from src.services.qdrant_service import QdrantService
 
 logger = structlog.get_logger(__name__)
 
@@ -56,16 +58,16 @@ class ChatService:
 
     Separação de responsabilidades (Requisito 3.1):
     - ChatService só decide qual fluxo usar e monta o prompt.
-    - AnthropicService cuida exclusivamente da chamada ao LLM.
+    - GeminiService cuida exclusivamente da chamada ao LLM.
     - QdrantService cuida exclusivamente da busca semântica.
-    """
+"""
 
     def __init__(
         self,
-        anthropic_service: AnthropicService | None = None,
-        qdrant_service: QdrantService | None = None,
+        gemini_service: "GeminiService",
+        qdrant_service: "QdrantService" | None = None,
     ) -> None:
-        self.anthropic_service = anthropic_service or AnthropicService()
+        self.gemini_service = gemini_service
         self._qdrant_service = qdrant_service
 
     def generate_response(
@@ -90,7 +92,7 @@ class ChatService:
 
         log.info("chat.direct_flow")
         try:
-            return self.anthropic_service.call_llm(
+            return self.gemini_service.call_llm(
                 message, system=SYSTEM_PROMPT, history=trimmed_history
             )
         except Exception as exc:
@@ -138,7 +140,7 @@ class ChatService:
         )
 
         try:
-            return self.anthropic_service.call_llm(
+            return self.gemini_service.call_llm(
                 prompt, system=RAG_SYSTEM_PROMPT, history=history
             )
         except Exception as exc:
@@ -148,6 +150,6 @@ class ChatService:
     def _get_qdrant(self) -> QdrantService:
         if self._qdrant_service is None:
             self._qdrant_service = QdrantService(
-                anthropic_service=self.anthropic_service
+                gemini_service=self.gemini_service
             )
         return self._qdrant_service

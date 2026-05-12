@@ -32,6 +32,17 @@ class ApiClient:
             )
             res.raise_for_status()
             return res.json().get("response", "")
+        except requests.HTTPError as exc:
+            response = exc.response
+            detail = None
+            if response is not None:
+                try:
+                    detail = response.json().get("detail")
+                except ValueError:
+                    detail = None
+            if detail:
+                return f"[Erro do backend: {detail}]"
+            return f"[Erro ao contatar o back-end: {exc}]"
         except requests.RequestException as e:
             return f"[Erro ao contatar o back-end: {e}]"
 
@@ -57,14 +68,24 @@ class ApiClient:
         self, collection: str, file_name: str, file_bytes: bytes
     ) -> dict:
         files = {"file": (file_name, file_bytes)}
-        res = requests.post(
-            f"{self.base_url}/collections/{collection}/documents",
-            files=files,
-            timeout=UPLOAD_TIMEOUT,
-        )
-        if res.status_code == 400:
-            raise ValueError(res.json().get("detail", "Arquivo inválido."))
-        if res.status_code == 404:
-            raise ValueError("Coleção não encontrada.")
-        res.raise_for_status()
-        return res.json()
+        try:
+            res = requests.post(
+                f"{self.base_url}/collections/{collection}/documents",
+                files=files,
+                timeout=UPLOAD_TIMEOUT,
+            )
+            res.raise_for_status()
+            return res.json()
+        except requests.HTTPError as exc:
+            response = exc.response
+            detail = None
+            if response is not None:
+                try:
+                    detail = response.json().get("detail")
+                except ValueError:
+                    detail = None
+            if detail:
+                raise RuntimeError(detail) from exc
+            raise RuntimeError(f"Erro ao enviar documento: {exc}") from exc
+        except requests.RequestException as exc:
+            raise RuntimeError(f"Erro ao contatar o back-end: {exc}") from exc

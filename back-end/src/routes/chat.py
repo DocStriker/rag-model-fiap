@@ -11,10 +11,12 @@ from __future__ import annotations
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
-
-from src.dependencies import get_chat_service
 from src.models.chat import ChatRequest, ChatResponse
-from src.services.chat_service import ChatService
+from src.dependencies import get_chat_service
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.services.chat_service import ChatService
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 logger = structlog.get_logger(__name__)
@@ -23,9 +25,10 @@ logger = structlog.get_logger(__name__)
 @router.post("", response_model=ChatResponse, status_code=status.HTTP_200_OK)
 def chat(
     request: ChatRequest,
-    chat_service: ChatService = Depends(get_chat_service),
+    chat_service: "ChatService" = Depends(get_chat_service),
 ) -> ChatResponse:
     """Envia uma mensagem e recebe uma resposta do assistente."""
+    from src.models.chat import ChatResponse
     logger.info(
         "route.chat",
         collection=request.collection,

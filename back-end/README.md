@@ -1,6 +1,6 @@
 # FIAP AI — Back-end (v2.0)
 
-API FastAPI com fluxo RAG completo: **Claude (Anthropic)** como LLM, **embeddings OpenAI** e **Qdrant** como banco vetorial.
+API FastAPI com fluxo RAG completo: **Gemini** como LLM e geração de embeddings.
 
 ---
 
@@ -8,7 +8,7 @@ API FastAPI com fluxo RAG completo: **Claude (Anthropic)** como LLM, **embedding
 
 - Python 3.11+
 - Docker e Docker Compose (opcional, recomendado)
-- Chaves de API: Anthropic e OpenAI
+- Chaves de API: Gemini (gratuito para embeddings)
 
 ---
 
@@ -16,16 +16,15 @@ API FastAPI com fluxo RAG completo: **Claude (Anthropic)** como LLM, **embedding
 
 ```bash
 cd back-end
-cp .env.example .env
-# Edite o .env e preencha ANTHROPIC_API_KEY, OPENAI_API_KEY e QDRANT_ENDPOINT
+cp .env
+# Edite o .env e preencha GEMINI_API_KEY e QDRANT_ENDPOINT
 ```
 
 ### Variáveis de ambiente obrigatórias
 
 | Variável           | Descrição                                        |
 |--------------------|--------------------------------------------------|
-| `ANTHROPIC_API_KEY`| Chave da API Anthropic (claude-3-5-haiku)        |
-| `OPENAI_API_KEY`   | Chave da API OpenAI (embeddings text-embedding-3-small) |
+| `GEMINI_API_KEY`   | Chave da API Gemini para chamadas de LLM e embeddings gratuitos |
 | `QDRANT_ENDPOINT`  | URL do cluster Qdrant (ex: `http://localhost:6333`) |
 
 ### Variáveis opcionais
@@ -124,7 +123,7 @@ form-data: file=<arquivo .txt | .md | .pdf> (máx 10 MB)
 pytest tests/ -v
 ```
 
-Os testes usam mocks para Anthropic e Qdrant — não precisam de chaves reais.
+Os testes usam mocks para Gemini e Qdrant — não precisam de chaves reais.
 
 ---
 
@@ -142,7 +141,7 @@ back-end/
 │   │   ├── chat.py                    # POST /chat
 │   │   └── collections.py            # CRUD /collections
 │   └── services/
-│       ├── anthropic_service.py      # LLM (Claude) + Embeddings
+│       ├── gemini_service.py        # LLM (Gemini) + Embeddings
 │       ├── qdrant_service.py         # Banco vetorial + chunking
 │       └── chat_service.py           # Orquestrador RAG
 ├── tests/

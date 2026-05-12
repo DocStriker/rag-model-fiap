@@ -41,13 +41,10 @@ structlog.configure(
 # ------------------------------------------------------------------
 # Aplicação
 # ------------------------------------------------------------------
-from src.routes.chat import router as chat_router  # noqa: E402
-from src.routes.collections import router as collections_router  # noqa: E402
-
 app = FastAPI(
     title="FIAP AI Chatbot API",
     version="2.0.0",
-    description="API de chat com RAG usando Claude (Anthropic) + Qdrant.",
+    description="API de chat com RAG usando Gemini + Qdrant.",
 )
 
 app.add_middleware(
@@ -57,6 +54,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Import routers after app creation to avoid circular imports
+from src.routes.chat import router as chat_router  # noqa: E402
+from src.routes.collections import router as collections_router  # noqa: E402
+
+app.include_router(chat_router)
+app.include_router(collections_router)
 
 app.include_router(chat_router)
 app.include_router(collections_router)

@@ -23,11 +23,11 @@ from pypdf import PdfReader
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
-from src.services.anthropic_service import AnthropicService
+from src.services.gemini_service import GeminiService
 
 logger = structlog.get_logger(__name__)
 
-DEFAULT_VECTOR_SIZE = 1536
+DEFAULT_VECTOR_SIZE = 1024
 DEFAULT_DISTANCE = Distance.COSINE
 DEFAULT_CHUNK_SIZE = 800        # caracteres por chunk
 DEFAULT_CHUNK_OVERLAP = 150     # sobreposição entre chunks
@@ -39,7 +39,7 @@ class QdrantService:
     """
     Gerencia coleções, indexação e busca semântica no Qdrant.
 
-    Injeção de dependência: recebe AnthropicService pelo construtor,
+    Injeção de dependência: recebe GeminiService pelo construtor,
     sem acoplamento direto à implementação concreta (Requisito 3.1).
     """
 
@@ -47,7 +47,7 @@ class QdrantService:
         self,
         endpoint: str | None = None,
         api_key: str | None = None,
-        anthropic_service: AnthropicService | None = None,
+        gemini_service: GeminiService | None = None,
     ) -> None:
         url = endpoint or os.getenv("QDRANT_ENDPOINT")
         key = api_key or os.getenv("QDRANT_API_KEY")
@@ -60,7 +60,7 @@ class QdrantService:
         self.client = QdrantClient(
             url=url, api_key=key, timeout=DEFAULT_CLIENT_TIMEOUT
         )
-        self.anthropic_service = anthropic_service
+        self.gemini_service = gemini_service
         logger.info("qdrant_service.initialized", endpoint=url)
 
     # ------------------------------------------------------------------
@@ -130,11 +130,11 @@ class QdrantService:
         texts: list[str],
         metadata: list[dict] | None = None,
     ) -> int:
-        self._require_anthropic()
+        self._require_gemini()
         log = logger.bind(collection=collection_name, total=len(texts))
         log.info("qdrant.upload_texts.start")
 
-        vectors = [self.anthropic_service.get_embedding(t) for t in texts]
+        vectors = [self.gemini_service.get_embedding(t) for t in texts]
 
         payloads: list[dict] = []
         for i, text in enumerate(texts):
@@ -190,11 +190,11 @@ class QdrantService:
         limit: int = 5,
         min_score: float = DEFAULT_MIN_SCORE,
     ) -> list[dict]:
-        self._require_anthropic()
+        self._require_gemini()
         log = logger.bind(collection=collection_name, limit=limit)
         log.info("qdrant.search.start")
 
-        vector = self.anthropic_service.get_embedding(query)
+        vector = self.gemini_service.get_embedding(query)
         result = self.client.query_points(
             collection_name=collection_name,
             query=vector,
@@ -212,11 +212,11 @@ class QdrantService:
     # Helpers privados
     # ------------------------------------------------------------------
 
-    def _require_anthropic(self) -> None:
-        if self.anthropic_service is None:
+    def _require_gemini(self) -> None:
+        if self.gemini_service is None:
             raise RuntimeError(
-                "AnthropicService é necessário para gerar embeddings. "
-                "Passe anthropic_service no construtor."
+                "GeminiService é necessário para gerar embeddings. "
+                "Passe gemini_service no construtor."
             )
 
     def _extract_pdf(

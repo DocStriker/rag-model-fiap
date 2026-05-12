@@ -6,7 +6,7 @@
 # dados em volume nomeado.
 #
 # Como usar:
-#   cp .env.example .env          # preencha as chaves
+#   cp .env          # preencha as chaves
 #   docker compose up --build     # sobe tudo
 #   docker compose down -v        # para e remove volumes
 
@@ -22,7 +22,7 @@ services:
       QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:-}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/6333 2>/dev/null'"]
       interval: 10s
       timeout: 5s
       retries: 5

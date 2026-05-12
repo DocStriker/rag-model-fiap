@@ -3,7 +3,7 @@ Testes automatizados — serviços e rotas.
 
 Justificativa (Requisito 3.6):
 Testes unitários com mocks garantem que a lógica de negócio funciona
-independentemente de serviços externos (Anthropic, Qdrant).
+independentemente de serviços externos (Gemini, Qdrant).
 Os testes de rota validam contratos HTTP sem depender de infra.
 
 Como rodar:
@@ -23,10 +23,10 @@ from fastapi.testclient import TestClient
 
 
 @pytest.fixture()
-def mock_anthropic_service():
+def mock_gemini_service():
     svc = MagicMock()
-    svc.call_llm.return_value = "Resposta simulada do Claude."
-    svc.get_embedding.return_value = [0.1] * 1536
+    svc.call_llm.return_value = "Resposta simulada do Gemini."
+    svc.get_embedding.return_value = [0.1] * 1024
     return svc
 
 
@@ -50,19 +50,21 @@ def mock_qdrant_service():
 
 
 @pytest.fixture()
-def client(mock_anthropic_service, mock_qdrant_service):
+def client(mock_gemini_service, mock_qdrant_service):
     """TestClient com dependências substituídas por mocks."""
-    from src.dependencies import get_anthropic_service, get_chat_service, get_qdrant_service
+    # Import app first
     from src.main import app
+    from src.dependencies import get_gemini_service, get_chat_service, get_qdrant_service
     from src.services.chat_service import ChatService
 
     def _chat_service():
         return ChatService(
-            anthropic_service=mock_anthropic_service,
+            gemini_service=mock_gemini_service,
             qdrant_service=mock_qdrant_service,
         )
 
-    app.dependency_overrides[get_anthropic_service] = lambda: mock_anthropic_service
+    # Apply overrides after app is imported
+    app.dependency_overrides[get_gemini_service] = lambda: mock_gemini_service
     app.dependency_overrides[get_qdrant_service] = lambda: mock_qdrant_service
     app.dependency_overrides[get_chat_service] = _chat_service
 
@@ -88,11 +90,11 @@ def test_health(client):
 # ------------------------------------------------------------------
 
 
-def test_chat_direct(client, mock_anthropic_service):
+def test_chat_direct(client, mock_gemini_service):
     r = client.post("/chat", json={"message": "Olá"})
     assert r.status_code == 200
-    assert r.json()["response"] == "Resposta simulada do Claude."
-    mock_anthropic_service.call_llm.assert_called_once()
+    assert r.json()["response"] == "Resposta simulada do Gemini."
+    mock_gemini_service.call_llm.assert_called_once()
 
 
 def test_chat_empty_message(client):
@@ -101,17 +103,17 @@ def test_chat_empty_message(client):
     assert r.status_code == 422
 
 
-def test_chat_with_collection(client, mock_anthropic_service, mock_qdrant_service):
+def test_chat_with_collection(client, mock_gemini_service, mock_qdrant_service):
     r = client.post(
         "/chat",
         json={"message": "O que diz o documento?", "collection": "docs"},
     )
     assert r.status_code == 200
     mock_qdrant_service.search.assert_called_once_with("docs", "O que diz o documento?", limit=4)
-    mock_anthropic_service.call_llm.assert_called_once()
+    mock_gemini_service.call_llm.assert_called_once()
 
 
-def test_chat_with_history(client, mock_anthropic_service):
+def test_chat_with_history(client, mock_gemini_service):
     history = [
         {"role": "user", "content": "Quem é você?"},
         {"role": "assistant", "content": "Sou o FIAP AI."},
@@ -188,26 +190,26 @@ def test_upload_txt_success(client, mock_qdrant_service):
 # ------------------------------------------------------------------
 
 
-def test_chat_service_empty_message(mock_anthropic_service):
+def test_chat_service_empty_message(mock_gemini_service):
     from src.services.chat_service import ChatService
 
-    svc = ChatService(anthropic_service=mock_anthropic_service)
+    svc = ChatService(gemini_service=mock_gemini_service)
     result = svc.generate_response("   ")
     assert result == "Por favor, envie uma mensagem válida."
-    mock_anthropic_service.call_llm.assert_not_called()
+    mock_gemini_service.call_llm.assert_not_called()
 
 
-def test_chat_service_rag_no_results(mock_anthropic_service, mock_qdrant_service):
+def test_chat_service_rag_no_results(mock_gemini_service, mock_qdrant_service):
     from src.services.chat_service import ChatService
 
     mock_qdrant_service.search.return_value = []
     svc = ChatService(
-        anthropic_service=mock_anthropic_service,
+        gemini_service=mock_gemini_service,
         qdrant_service=mock_qdrant_service,
     )
     result = svc.generate_response("Pergunta", collection="vazia")
     assert "Não encontrei" in result
-    mock_anthropic_service.call_llm.assert_not_called()
+    mock_gemini_service.call_llm.assert_not_called()
 
 
 # ------------------------------------------------------------------
